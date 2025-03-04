@@ -5,8 +5,8 @@
 # - ECDSA with P-384 curve
 # - SHA-384 signature algorithm
 
-# Source configuration file
-CONFIG_FILE="$(dirname "$0")/cert_config.conf"
+# Load configuration file from project root
+CONFIG_FILE="$(dirname "$(dirname "$0")")/cert_config.conf"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Error: Configuration file not found: $CONFIG_FILE"
     exit 1
@@ -20,11 +20,19 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 YELLOW='\033[1;33m'
 
+# Usage information
+usage() {
+    echo "Usage: $0 [directory]"
+    echo "  directory: Directory containing ca.der and client.p12 (default: certs/)"
+    echo "Example: $0 certs-suite-b192"
+    exit 1
+}
+
 check_requirements() {
     if ! command -v openssl &> /dev/null; then
         echo -e "${RED}Error: OpenSSL is not installed${NC}"
         exit 1
-    fi
+    }
 }
 
 print_result() {
@@ -133,16 +141,35 @@ check_client_cert() {
 main() {
     check_requirements
     
+    # Get directory from argument or use default
+    local CERT_DIR="certs"
+    if [ $# -eq 1 ]; then
+        CERT_DIR="$1"
+    elif [ $# -gt 1 ]; then
+        usage
+    fi
+    
+    # Remove trailing slash if present
+    CERT_DIR=${CERT_DIR%/}
+    
+    # Check if directory exists
+    if [ ! -d "$CERT_DIR" ]; then
+        echo -e "${RED}Error: Directory not found: $CERT_DIR${NC}"
+        exit 1
+    fi
+    
     local ca_result=false
     local client_result=false
     
+    echo -e "${YELLOW}Checking certificates in directory: $CERT_DIR${NC}"
+    
     # Check CA certificate
-    if check_ca_cert "certs/ca.der"; then
+    if check_ca_cert "$CERT_DIR/ca.der"; then
         ca_result=true
     fi
     
     # Check Client certificate
-    if check_client_cert "certs/client.p12"; then
+    if check_client_cert "$CERT_DIR/client.p12"; then
         client_result=true
     fi
     
@@ -159,4 +186,4 @@ main() {
     fi
 }
 
-main
+main "$@"

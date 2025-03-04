@@ -1,53 +1,105 @@
-# WPA3 Certificate Checker
+# WPA3 Certificate Tools
 
-This tool helps verify if your certificates meet the requirements for WPA-EAP-SUITE-B-192 authentication in WPA3 Enterprise networks.
-
-## Requirements
-
-- OpenSSL installed on your system
-- Certificates to check:
-  - CA certificate in DER format
-  - Client certificate in PKCS12 format
+This project provides tools for checking and generating certificates for WPA3 Enterprise networks, specifically focusing on WPA-EAP-SUITE-B-192 support.
 
 ## Project Structure
 
 ```
 .
 ├── bin/
-│   ├── check_suite_b_192.sh    # Main checking script
-│   └── cert_config.conf        # Configuration file
-├── certs/
-│   ├── ca.der                  # CA certificate
-│   └── client.p12             # Client certificate
+│   └── check_suite_b_192.sh    # Certificate checking script
+├── cert_config.conf            # Configuration file for certificate checking
+├── certs/                      # Default directory for certificates to check
+│   ├── ca.der                 # CA certificate to check
+│   └── client.p12            # Client certificate to check
+├── certs-basic/               # Standard FreeRADIUS certificate configurations
+│   ├── Makefile              # Original certificate generation rules
+│   ├── ca.cnf                # CA certificate configuration
+│   ├── server.cnf            # Server certificate configuration
+│   ├── client.cnf            # Client certificate configuration
+│   ├── xpextensions          # X509v3 extensions configuration
+│   └── passwords.mk          # Certificate passwords configuration
+├── certs-suite-b192/         # SUITE-B-192 compatible certificate configurations
+│   ├── Makefile              # Modified for SUITE-B-192 support
+│   ├── ca.cnf                # Modified to use ECDSA P-384
+│   ├── server.cnf            # Modified to use ECDSA P-384
+│   ├── client.cnf            # Modified to use ECDSA P-384
+│   ├── xpextensions          # X509v3 extensions configuration
+│   └── passwords.mk          # Certificate passwords configuration
 └── README.md
 ```
 
-## Configuration
+## Certificate Configurations
 
-Edit `bin/cert_config.conf` to set your PKCS12 certificate password:
+The project includes two sets of certificate configurations:
+
+1. **certs-basic/**: Contains original FreeRADIUS certificate configurations
+   - Standard RSA-based certificates
+   - Compatible with regular WPA3 Enterprise setups
+
+2. **certs-suite-b192/**: Contains modified configurations for WPA-EAP-SUITE-B-192
+   - Uses ECDSA with P-384 curve
+   - Uses SHA-384 signature algorithm
+   - Meets Suite-B-192 requirements
+
+To use these configurations, copy the required files from your FreeRADIUS installation:
+```bash
+# For standard certificates
+cd /path/to/freeradius/3.0/certs
+cp Makefile ca.cnf server.cnf client.cnf xpextensions passwords.mk /path/to/WPA3/certs-basic/
+
+# For SUITE-B-192 certificates
+cp Makefile ca.cnf server.cnf client.cnf xpextensions passwords.mk /path/to/WPA3/certs-suite-b192/
+```
+
+## Certificate Checker
+
+### Requirements
+
+- OpenSSL installed on your system
+- Certificates to check:
+  - CA certificate in DER format
+  - Client certificate in PKCS12 format
+
+### Configuration
+
+Edit `cert_config.conf` in the project root to set your PKCS12 certificate password:
 
 ```bash
 # Configuration for certificate checking
 PKCS12_PASSWORD=your_password_here
 ```
 
-## Usage
+### Usage
 
-1. Place your certificates in the `certs/` directory:
-   - CA certificate as `ca.der`
-   - Client certificate as `client.p12`
-
-2. Make sure the script has execution permissions:
+1. Make sure the script has execution permissions:
    ```bash
    chmod +x bin/check_suite_b_192.sh
    ```
 
-3. Run the checker:
+2. Run the checker with a specific directory:
    ```bash
-   ./bin/check_suite_b_192.sh
+   ./bin/check_suite_b_192.sh [directory]
    ```
 
-## What it Checks
+   Examples:
+   ```bash
+   # Check certificates in the default certs/ directory
+   ./bin/check_suite_b_192.sh
+
+   # Check certificates in certs-basic/ directory
+   ./bin/check_suite_b_192.sh certs-basic
+
+   # Check certificates in certs-suite-b192/ directory
+   ./bin/check_suite_b_192.sh certs-suite-b192
+   ```
+
+   The script expects to find:
+   - `ca.der` - CA certificate
+   - `client.p12` - Client certificate
+   in the specified directory
+
+### What it Checks
 
 The script verifies if your certificates meet WPA-EAP-SUITE-B-192 requirements:
 
@@ -59,7 +111,7 @@ For each certificate, it checks:
 - Key Algorithm (must be ECDSA)
 - Curve Type (must be NIST P-384)
 
-## Output
+### Output
 
 The script provides colorized output indicating:
 - ✓ Green: Requirement met
@@ -68,12 +120,14 @@ The script provides colorized output indicating:
 
 Example output:
 ```
-Checking CA certificate (certs/ca.der):
+Checking certificates in directory: certs-suite-b192
+
+Checking CA certificate (certs-suite-b192/ca.der):
 ✓ Signature Algorithm: Using ECDSA with SHA384
 ✓ Key Algorithm: Using ECDSA
 ✓ Curve: Using P-384
 
-Checking Client certificate (certs/client.p12):
+Checking Client certificate (certs-suite-b192/client.p12):
 ✓ Signature Algorithm: Using ECDSA with SHA384
 ✓ Key Algorithm: Using ECDSA
 ✓ Curve: Using P-384
@@ -85,22 +139,26 @@ Final Results:
 Both certificates support WPA-EAP-SUITE-B-192!
 ```
 
-## Exit Codes
+### Exit Codes
 
 - 0: All certificates support Suite-B-192
 - 1: One or more certificates do not support Suite-B-192 or error occurred
 
-## Troubleshooting
+### Troubleshooting
 
 1. If you see "Error: Configuration file not found":
-   - Make sure `cert_config.conf` exists in the `bin/` directory
+   - Make sure `cert_config.conf` exists in the project root directory
    - Check file permissions
 
-2. If you see "Error: Certificate file not found":
-   - Verify certificates are in the `certs/` directory
+2. If you see "Error: Directory not found":
+   - Verify the specified directory exists
+   - Check directory permissions
+
+3. If you see "Error: Certificate file not found":
+   - Verify certificates exist in the specified directory
    - Check file permissions
    - Verify filenames match expected names (ca.der, client.p12)
 
-3. If you see "Error: Failed to read PKCS12 file":
+4. If you see "Error: Failed to read PKCS12 file":
    - Check if the password in `cert_config.conf` is correct
    - Verify the PKCS12 file is not corrupted
