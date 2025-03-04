@@ -32,7 +32,7 @@ check_requirements() {
     if ! command -v openssl &> /dev/null; then
         echo -e "${RED}Error: OpenSSL is not installed${NC}"
         exit 1
-    }
+    fi
 }
 
 print_result() {
@@ -70,7 +70,7 @@ check_ca_cert() {
     fi
     
     # Check public key
-    if ! echo "$cert_info" | grep -A 2 "Public Key Algorithm" | grep -q "ECDSA"; then
+    if ! echo "$cert_info" | grep -q "Public Key Algorithm: id-ecPublicKey"; then
         echo -e "${RED}✗ Key Algorithm: Not using ECDSA${NC}"
         supports_suite_b=false
     else
@@ -78,7 +78,7 @@ check_ca_cert() {
     fi
     
     # Check curve
-    if ! echo "$cert_info" | grep -q "NIST P-384"; then
+    if ! echo "$cert_info" | grep -q "NIST CURVE: P-384"; then
         echo -e "${RED}✗ Curve: Not using P-384${NC}"
         supports_suite_b=false
     else
@@ -101,11 +101,12 @@ check_client_cert() {
         return 1
     fi
     
-    # Get PKCS12 info using password from config
+    # Extract certificate from PKCS12 and convert to text
     local cert_info
-    cert_info=$(openssl pkcs12 -info -in "$cert_file" -nodes -password "pass:$PKCS12_PASSWORD" 2>/dev/null)
+    cert_info=$(openssl pkcs12 -in "$cert_file" -nodes -passin "pass:$PKCS12_PASSWORD" 2>/dev/null | \
+                openssl x509 -text 2>/dev/null)
     
-    if [ $? -ne 0 ]; then
+    if [ -z "$cert_info" ]; then
         echo -e "${RED}Error: Failed to read PKCS12 file. Check your password in $CONFIG_FILE${NC}"
         return 1
     fi
@@ -119,7 +120,7 @@ check_client_cert() {
     fi
     
     # Check public key
-    if ! echo "$cert_info" | grep -A 2 "Public Key Algorithm" | grep -q "ECDSA"; then
+    if ! echo "$cert_info" | grep -q "Public Key Algorithm: id-ecPublicKey"; then
         echo -e "${RED}✗ Key Algorithm: Not using ECDSA${NC}"
         supports_suite_b=false
     else
@@ -127,7 +128,7 @@ check_client_cert() {
     fi
     
     # Check curve
-    if ! echo "$cert_info" | grep -q "NIST P-384"; then
+    if ! echo "$cert_info" | grep -q "NIST CURVE: P-384"; then
         echo -e "${RED}✗ Curve: Not using P-384${NC}"
         supports_suite_b=false
     else
