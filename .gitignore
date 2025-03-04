@@ -1,0 +1,31 @@
+# Certificate files
+*.pem
+*.der
+*.csr
+*.crt
+*.key
+*.p12
+
+# FreeRADIUS certificate generated files
+index.txt*
+serial*
+password.time
+random
+dh
+
+# Specific directories contents but keep directory structure
+certs/*
+!certs/.gitkeep
+certs-basic/*
+!certs-basic/.gitkeep
+certs-suite-b192/*
+!certs-suite-b192/.gitkeep
+
+# Local configuration
+cert_config.conf
+
+# Build artifacts and temporary files
+*.o
+*.so
+*.swp
+.DS_Store
